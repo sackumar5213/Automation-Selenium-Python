@@ -10,6 +10,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from openpyxl import Workbook 
 from selenium.common.exceptions import NoSuchElementException  # for if element not found
+from selenium.webdriver.support.ui import Select # for selecting the Select in category
+import sys
 
 
 wb = Workbook()  
@@ -17,68 +19,182 @@ sheet = wb.active
 
 driver=webdriver.Chrome()
 
-# Price is in text, so make it in number
-def text_to_number(text_with_commas):
-    # Remove commas from the text
-    text_without_commas = text_with_commas.replace(',', '')
-    numeric_value = float(text_without_commas)
-    return numeric_value
+def Login():
+    driver.find_element(By.XPATH,"/html/body/header/nav/div[2]/ul/li[2]/a").click()
+    driver.find_element(By.XPATH,"/html/body/section[2]/div/div[1]/div[2]/form/div[1]/input").send_keys("001976rakesh@gmail.com")
+    driver.find_element(By.XPATH,"/html/body/section[2]/div/div[1]/div[2]/form/div[2]/input").send_keys("Rakesh@152")
+    driver.find_element(By.XPATH,"/html/body/section[2]/div/div[1]/div[2]/form/div[3]/button").click()
+    # time.sleep(3)
 
-place_name="Gautam budh nagar"
+
+
+
 url="https://findauction.in/"
 driver.get(url)
-place=driver.find_element(By.XPATH,"/html/body/section[1]/div/div/div/div/div/div[2]/div[1]/div[1]/input").send_keys(place_name)
-search=driver.find_element(By.XPATH,"/html/body/section[1]/div/div/div/div/div/div[2]/div[1]/div[3]/button").click()
+
+
+# Log In
+Login()
+time.sleep(1)
+
+# # # Enter place and bank
+place="Delhi"
+bank="Punjab & Sind Bank"
+
+from_date="2024-02-20" # enter in yyyy-mm-dd format
+#      &todate=2023-12-20
+
+
+last_record=13
+# int(sys.argv[1])  #Enter number of Records (not more than 15)
+
+starting_page=2   # starting page
+
+last_page=2      # Last Page   
+# int(sys.argv[2])    # Enter number of pages
+
+# click on SEARCH Button in Navigation bar 
+driver.find_element(By.XPATH,"/html/body/header/nav/div[3]/ul/li[2]/a").click()
+time.sleep(2)
+
+# storing place name in filter form
+driver.find_element(By.XPATH,"/html/body/section/div/div/div[2]/form/div[1]/div/input").send_keys(place)
+
+# storing bank name in filter form
+driver.find_element(By.XPATH,"/html/body/section/div/div/div[2]/form/div[2]/div[1]/input[1]").send_keys(bank)
+
+# selecting Category
+# identify dropdown with Select class
+###### comment kardo agar use nhi karna
+# sel = Select(driver.find_element(By.XPATH,"/html/body/section/div/div/div[2]/form/div[2]/div[2]/select"))
+
+#select by select_by_visible_text() method
+
+###### comment kardo agar use nhi karna
+# sel.select_by_index(3)
+# 0-All Category
+# 1-Flat and Floor
+# 2-House and Residential Plot
+# 3-Land, Plot and Site
+# 4-Commercial, Office and Shop
+# 5-Car
+# 6-Plant and Machinery
+
+# choosing date of auction \\ ismai abhi date ka XML enter karna hai
+# driver.find_element(By.XPATH,"/html/body/section/div/div/div[2]/form/div[1]/div/input").send_keys(place)
+
+#chosing physical or symbolic possession
+driver.find_element(By.XPATH,"//*[@id='physical_possession']").click()
+# for Physical : //*[@id='physical_possession']
+# for Symbolic : //*[@id="symbolic_possession"]
+
+
+# clicking on SEARCH Button to make list
+driver.find_element(By.XPATH,"/html/body/section/div/div/div[2]/form/div[6]/div/input[5]").click()
+# time.sleep(10)
+
+
+
+
+
+# Entering the headers in excel in top of the data
+names = ["Sr. No.", "Bank", "Borrower","Type","Short Add","Address","Area", "Locality", "City","Status","Reserve Price", "Auction", "Auth Contact", "Links"]
+sheet.append(names)
+
+# extracting Current link to add parameter of pages
 new_url = driver.current_url
-gen_url=new_url+"/all/all/" #for storing next url with all 
+gen_url = new_url + "&fromdate="+from_date+"&sort=sortby%3Anewest&page=" #for storing next url with all 
 
-print(new_url)
-print(gen_url)
+# you can change the date of auction in the gen_url link
 
-z=0
-for y in range(1,6): # from page 1 to 5
-    driver.get(gen_url+str(y))
-    next_url=driver.current_url
-    sheet['H'+str(z+1)]=next_url
-    # time.sleep(3)
+empty_row=1
+# Going into deeper details of property
+for page in range(starting_page,last_page+1):
+    driver.get(gen_url+str(page))
+  
     
-    for i in range(2,17):   #extracting data
-        location_name=driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/div[1]/h5/a").text
-        bank_name  =driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/div[1]/h5/small").text
-        price=driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/div[1]/h6").text
-
+    for i in range(2,last_record+2):  #each page contains 15 records. Hence 2 to 17
+        print("i=  ",i-1)
         try:
-            auction_date =driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/ul/li[1]").text
+            auction_date =driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/ul/li[1]").text
         except NoSuchElementException:
-            auction_date=""
-
+            auction_date="NA"
         try:
-            area=driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/ul/li[2]").text
+            area=driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/ul/li[2]").text
         except NoSuchElementException:
-            area=""
-
+            area="NA"
         try:
-            status=driver.find_element(By.XPATH,"/html/body/section[2]/div/div/div[2]/div["+str(i)+"]/div/div/div/div/ul/li[3]").text
+            status=driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/ul/li[3]").text
         except NoSuchElementException:
-            status=""
-            
-        z=z+1
-        # Entering the record of the property in row of the excel
-        sheet['A'+str(z)]=bank_name
-        sheet['B'+str(z)]=location_name
-        sheet['C'+str(z)]=area
-        sheet['D'+str(z)]=status
-        if(price==""):
-            sheet['E'+str(z)]=price
-        else:
-            sheet['E'+str(z)]=text_to_number(price)
-        sheet['F'+str(z)]=auction_date
-    z=z+1   # to create empty row for differentiate the data of each pages
+            status="NA"
+
+        # storing the short description of the property like location
+        short_add=driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/div[1]/h5/a").text
+
+        # # going inner for storing detailed data of property
+        reserve_price=driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/div[1]/h6").text
+        driver.find_element(By.XPATH,"/html/body/section/div/div/div[4]/div["+str(i)+"]/div/div/div/div/div[2]/a").click()
+        links=driver.current_url
+        time.sleep(1.5)
+
+        # #storing data of property
+        borrower=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl[1]/dd").text
+        bank_name=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl[2]/dd/a").text
+        property_type=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl[3]/dd").text
+        location=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl[4]/dd").text
+
+        for contact_loop in range(5,20):
+            try:
+                district=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dt").text
+            except NoSuchElementException:
+                district="NA"
+            if(district=="Locality"):
+                district=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dd").text
+                break
         
-    
-    
-        
+        for contact_loop in range(5,20):
+            try:
+                town=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dt").text
+            except NoSuchElementException:
+                city="NA"
+            if(town=="City"):
+                city=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dd").text
+                break
 
-wb.save(place_name+"_Sale_enteries.xlsx")  
+        # city=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop+1)+"]/dd").text
 
 
+        for contact_loop in range(5,20):
+            try:
+                contact=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dt").text
+            except NoSuchElementException:
+                pass
+            if(contact=="Contact Details for Support"):
+                authorized_details=driver.find_element(By.XPATH,"/html/body/section[2]/div[2]/div/div[1]/div[4]/div[2]/dl["+str(contact_loop)+"]/dd").text
+                break
+
+        # data entry into sheet
+        empty_row=empty_row+1
+        sheet['A'+str(empty_row)]=empty_row-1
+        sheet['B'+str(empty_row)]=bank_name
+        sheet['C'+str(empty_row)]=borrower
+        sheet['D'+str(empty_row)]=property_type
+        sheet['E'+str(empty_row)]=short_add
+        sheet['F'+str(empty_row)]=location
+        sheet['G'+str(empty_row)]=area   
+        sheet['H'+str(empty_row)]=city
+        sheet['I'+str(empty_row)]=district
+        sheet['J'+str(empty_row)]= status
+        sheet['K'+str(empty_row)]= reserve_price
+        sheet['L'+str(empty_row)]=auction_date 
+        sheet['M'+str(empty_row)]=authorized_details
+        sheet['N'+str(empty_row)]=links
+        print("Empty row= ", empty_row)
+
+        driver.back()
+        ######################################
+    # empty_row=empty_row+1
+
+
+wb.save(place+" ("+bank+")____Sale_entry.xlsx")
+time.sleep(2)
